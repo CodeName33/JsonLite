@@ -1,3 +1,5 @@
+#ifndef _JSONLITE_H_
+#define _JSONLITE_H_
 #include <Arduino.h>
 
 
@@ -35,7 +37,7 @@ public:
             //Serial.print(cache[ptr - addr]);
             return cache[ptr - addr];
         }
-        memcpy_P(cache, (PGM_P)ptr, sizeof(cache));
+        memcpy_P((void*)cache, (PGM_P)ptr, sizeof(cache));
         *(const char **)(&addr) = ptr;
         //Serial.print(cache[0]);
         return cache[0];
@@ -239,6 +241,7 @@ public:
         const char* currentText = str;
         char lastC = 0;
         int currentLen = 0;
+        parseInfo.foundParam = 1;
 
         while (str < strMax)
         {
@@ -276,6 +279,11 @@ public:
                         }
                         return;
                     case ',':
+                        if (parseInfo.foundParam)
+                        {
+                            currentLen = (str - 1) - currentText;
+                            func(CJsonParserLite<T>(currentText, currentLen));
+                        }
                         currentText = str;
                         parseInfo.foundParam = 1;
                         break;
@@ -356,9 +364,12 @@ public:
                         return;
                         break;
                     case ',':
-                        currentLen = (str - 1) - currentText;
-                        func(propName, CJsonParserLite<T>(currentText, currentLen));
-                        parseInfo.foundParam = 0;
+                        if (parseInfo.foundParam)
+                        {
+                            currentLen = (str - 1) - currentText;
+                            func(propName, CJsonParserLite<T>(currentText, currentLen));
+                            parseInfo.foundParam = 0;
+                        }
                         parseInfo.step = EJsonParseStep_None;
                         break;
                     case ':':
@@ -537,3 +548,4 @@ public:
 
 typedef CJsonParserLite<CJsonMemory> CJsonMemoryParserLite;
 typedef CJsonParserLite<CJsonProgmem> CJsonProgmemParserLite;
+#endif
